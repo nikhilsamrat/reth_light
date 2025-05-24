@@ -247,6 +247,30 @@ impl<H: NippyJarHeader> NippyJar<H> {
         Ok(())
     }
 
+    pub fn move_delete(self) -> Result<(), NippyJarError> {
+        // Create archive directory if it doesn't exist
+        let parent_dir = self.data_path().parent().ok_or(NippyJarError::Custom("".into()))?;
+        let archive_dir = parent_dir.join("archive");
+        reth_fs_util::create_dir_all(&archive_dir)?;
+        
+        for path in [
+            self.data_path().into(), 
+            self.index_path(), 
+            self.offsets_path(), 
+            self.config_path()
+        ] {
+            if path.exists() {
+                let file_name = path.file_name().ok_or(NippyJarError::Custom("".into()))?
+                    .to_string_lossy()
+                    .to_string();
+                let archive_path = archive_dir.join(file_name);
+                reth_fs_util::rename(path, archive_path)?;
+            }
+        }
+    
+        Ok(())
+    }
+
     /// Returns a [`DataReader`] of the data and offset file
     pub fn open_data_reader(&self) -> Result<DataReader, NippyJarError> {
         DataReader::new(self.data_path())

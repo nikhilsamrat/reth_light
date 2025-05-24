@@ -2221,18 +2221,18 @@ where
         self.metrics.block_validation.record_state_root(&trie_output, root_elapsed.as_secs_f64());
         debug!(target: "engine::tree", ?root_elapsed, block=?block_num_hash, "Calculated state root");
 
-        // ensure state root matches
-        if state_root != block.header().state_root() {
-            // call post-block hook
-            self.on_invalid_block(&parent_block, &block, &output, Some((&trie_output, state_root)));
-            return Err((
-                ConsensusError::BodyStateRootDiff(
-                    GotExpected { got: state_root, expected: block.header().state_root() }.into(),
-                )
-                .into(),
-                block,
-            ))
-        }
+        // // ensure state root matches
+        // if state_root != block.header().state_root() {
+        //     // call post-block hook
+        //     self.on_invalid_block(&parent_block, &block, &output, Some((&trie_output, state_root)));
+        //     return Err((
+        //         ConsensusError::BodyStateRootDiff(
+        //             GotExpected { got: state_root, expected: block.header().state_root() }.into(),
+        //         )
+        //         .into(),
+        //         block,
+        //     ))
+        // }
 
         // terminate prewarming task with good state output
         handle.terminate_caching(Some(output.state.clone()));

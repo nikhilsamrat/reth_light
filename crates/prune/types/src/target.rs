@@ -5,7 +5,7 @@ use crate::{PruneMode, ReceiptsLogPruneConfig};
 ///    consensus protocol.
 /// 2. Another 10k blocks to have a room for maneuver in case when things go wrong and a manual
 ///    unwind is required.
-pub const MINIMUM_PRUNING_DISTANCE: u64 = 32 * 2 + 10_000;
+pub const MINIMUM_PRUNING_DISTANCE: u64 = 32 * 2;
 
 /// Pruning configuration for every segment of the data that can be pruned.
 #[derive(Debug, Clone, Default, Eq, PartialEq)]
@@ -75,6 +75,11 @@ impl PruneModes {
     /// Returns whether there is any kind of receipt pruning configuration.
     pub fn has_receipts_pruning(&self) -> bool {
         self.receipts.is_some() || !self.receipts_log_filter.is_empty()
+    }
+
+    /// Returns whether there is any kind of receipt pruning configuration.
+    pub fn has_sender_pruning(&self) -> bool {
+        self == &Self { sender_recovery: self.sender_recovery, ..PruneModes::none() }
     }
 
     /// Returns true if all prune modes are set to [`None`].

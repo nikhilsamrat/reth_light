@@ -322,17 +322,17 @@ where
             .add_stage_opt(self.prune_modes.sender_recovery.map(|prune_mode| {
                 PruneSenderRecoveryStage::new(prune_mode, self.stages_config.prune.commit_threshold)
             }))
-            .add_set(HashingStages { stages_config: self.stages_config.clone() })
-            .add_set(HistoryIndexingStages {
-                stages_config: self.stages_config.clone(),
-                prune_modes: self.prune_modes.clone(),
-            })
+            // .add_set(HashingStages { stages_config: self.stages_config.clone() })
+            // .add_set(HistoryIndexingStages {
+            //     stages_config: self.stages_config.clone(),
+            //     prune_modes: self.prune_modes.clone(),
+            // })
             // If any prune modes are set, add the prune stage.
-            .add_stage_opt(self.prune_modes.is_empty().not().then(|| {
-                // Prune stage should be added after all hashing stages, because otherwise it will
-                // delete
-                PruneStage::new(self.prune_modes.clone(), self.stages_config.prune.commit_threshold)
-            }))
+            // .add_stage_opt(self.prune_modes.is_empty().not().then(|| {
+            //     // Prune stage should be added after all hashing stages, because otherwise it will
+            //     // delete
+            //     PruneStage::new(self.prune_modes.clone(), self.stages_config.prune.commit_threshold)
+            // }))
     }
 }
 

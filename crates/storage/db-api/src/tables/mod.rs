@@ -34,7 +34,7 @@ use reth_prune_types::{PruneCheckpoint, PruneSegment};
 use reth_stages_types::StageCheckpoint;
 use reth_trie_common::{BranchNodeCompact, StorageTrieEntry, StoredNibbles, StoredNibblesSubKey};
 use serde::{Deserialize, Serialize};
-use std::fmt;
+use std::{fmt, slice::GetDisjointMutError};
 
 /// Enum for the types of tables present in libmdbx.
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
@@ -121,6 +121,28 @@ macro_rules! tables {
         concat!("`", stringify!($value), "`")
     };
 
+    // Helper macro for conditional DupSort implementation
+    (@impl_dupsort PlainStorageState, $subkey:ty) => {
+        impl DupSort for PlainStorageState {
+            type SubKey = $subkey;
+            fn get_subkey(value: &Self::Value) -> Option<Self::SubKey> {
+                Some(value.key)
+            }
+        }
+    };
+
+    (@impl_dupsort $name:ident, $subkey:ty) => {
+        impl DupSort for $name {
+            type SubKey = $subkey;
+            fn get_subkey(value: &Self::Value) -> Option<Self::SubKey> {
+                None
+            }
+        }
+    };
+
+    // Handle case where no SubKey is defined
+    (@impl_dupsort $name:ident,) => {};
+
     ($($(#[$attr:meta])* table $name:ident$(<$($generic:ident $(= $default:ty)?),*>)? { type Key = $key:ty; type Value = $value:ty; $(type SubKey = $subkey:ty;)? } )*) => {
         // Table marker types.
         $(
@@ -154,11 +176,17 @@ macro_rules! tables {
                 type Value = $value;
             }
 
-            $(
-                impl DupSort for $name {
-                    type SubKey = $subkey;
-                }
-            )?
+            // $(
+            //     impl DupSort for $name {
+            //         type SubKey = $subkey;
+            //         fn get_subkey(value: &Self::Value) -> Option<Self::SubKey> {
+            //             None
+            //         }
+            //     }
+            // )?
+
+            tables!(@impl_dupsort $name, $($subkey)?);
+        
         )*
 
         // Tables enum.
@@ -217,6 +245,7 @@ macro_rules! tables {
                     )*
                 }
             }
+            
         }
 
         impl fmt::Debug for Tables {
@@ -526,6 +555,7 @@ tables! {
         type Value = BlockNumber;
     }
 }
+
 
 /// Keys for the `ChainState` table.
 #[derive(Ord, Clone, Eq, PartialOrd, PartialEq, Debug, Deserialize, Serialize, Hash)]

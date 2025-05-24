@@ -1,7 +1,7 @@
 //! Contains the main provider types and traits for interacting with the blockchain's storage.
 
 use reth_chainspec::EthereumHardforks;
-use reth_db_api::table::Value;
+use reth_db_api::table::ValueInner;
 use reth_node_types::{FullNodePrimitives, NodeTypes, NodeTypesWithDB};
 
 mod database;
@@ -35,7 +35,7 @@ where
     Self: NodeTypes<
         ChainSpec: EthereumHardforks,
         Storage: ChainStorage<Self::Primitives>,
-        Primitives: FullNodePrimitives<SignedTx: Value, Receipt: Value, BlockHeader: Value>,
+        Primitives: FullNodePrimitives<SignedTx: ValueInner, Receipt: ValueInner, BlockHeader: ValueInner>,
     >,
 {
 }
@@ -44,7 +44,7 @@ impl<T> NodeTypesForProvider for T where
     T: NodeTypes<
         ChainSpec: EthereumHardforks,
         Storage: ChainStorage<T::Primitives>,
-        Primitives: FullNodePrimitives<SignedTx: Value, Receipt: Value, BlockHeader: Value>,
+        Primitives: FullNodePrimitives<SignedTx: ValueInner, Receipt: ValueInner, BlockHeader: ValueInner>,
     >
 {
 }

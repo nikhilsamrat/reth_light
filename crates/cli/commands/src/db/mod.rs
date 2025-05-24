@@ -12,6 +12,8 @@ mod checksum;
 mod clear;
 mod diff;
 mod get;
+mod set;
+mod dump;
 mod list;
 mod stats;
 /// DB List TUI
@@ -40,6 +42,10 @@ pub enum Subcommands {
     Diff(diff::Command),
     /// Gets the content of a table for the given key
     Get(get::Command),
+    /// Sets the content of a table for the given key with given value
+    Set(set::Command),
+    /// Sets the content of a table for the given key with given value
+    Dump(dump::Command),
     /// Deletes all database entries
     Drop {
         /// Bypasses the interactive confirmation and drops the database directly
@@ -105,6 +111,15 @@ impl<C: ChainSpecParser<ChainSpec: EthChainSpec + EthereumHardforks>> Command<C>
                 });
             }
             Subcommands::Get(command) => {
+                db_ro_exec!(self.env, tool, N, {
+                    command.execute(&tool)?;
+                });
+            }
+            Subcommands::Set(command) => {
+                let Environment { provider_factory, .. } = self.env.init::<N>(AccessRights::RW)?;
+                command.execute(provider_factory)?;
+            }
+            Subcommands::Dump(command) => {
                 db_ro_exec!(self.env, tool, N, {
                     command.execute(&tool)?;
                 });

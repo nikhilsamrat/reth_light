@@ -18,6 +18,7 @@ use std::pin::Pin;
 use tokio::sync::watch;
 use tracing::*;
 
+
 mod builder;
 mod progress;
 mod set;
@@ -191,6 +192,119 @@ impl<N: ProviderNodeTypes> Pipeline<N> {
         }
     }
 
+    pub fn find_min_previous_block_number(&self) -> Result<Option<BlockNumber>, PipelineError> {
+        let mut min_previous_block_number: Option<BlockNumber> = None;
+    
+        for stage_index in 0..self.stages.len() {
+            let stage = &self.stages[stage_index];
+            let stage_id = stage.id();
+            let previous_stage= self.provider_factory.provider()?.get_stage_checkpoint(stage_id)?.unwrap_or_default().block_number;
+            min_previous_block_number = match min_previous_block_number {
+                Some(min) => Some(min.min(previous_stage)),
+                None => Some(previous_stage),
+            };
+        }
+
+        info!(
+            target: "sync::pipeline",
+            ?min_previous_block_number,
+            "Minimum previous block number across all stages"
+        );
+    
+        Ok(min_previous_block_number)
+    }
+
+    // /// Performs one pass of the pipeline across all stages. After successful
+    // /// execution of each stage, it proceeds to commit it to the database.
+    // ///
+    // /// If any stage is unsuccessful at execution, we proceed to
+    // /// unwind. This will undo the progress across the entire pipeline
+    // /// up to the block that caused the error.
+    // ///
+    // /// Returns the control flow after it ran the pipeline.
+    // /// This will be [`ControlFlow::Continue`] or [`ControlFlow::NoProgress`] of the _last_ stage in
+    // /// the pipeline (for example the `Finish` stage). Or [`ControlFlow::Unwind`] of the stage
+    // /// that caused the unwind.
+    // pub async fn run_loop(&mut self) -> Result<ControlFlow, PipelineError> {
+    //     let block = self.find_min_previous_block_number()?.unwrap_or(0); 
+    //     if let Some(target) = self.max_block {
+    //         for i in (500000..target).step_by(500000) {
+    //             if i > block {
+    //                 self.max_block = Some(i);
+    //                 self._run_loop().await?;
+    //             }
+    //         }
+    //         self.max_block = Some(target);
+    //     }
+    //     self._run_loop().await
+    // }
+
+    // pub async fn run_loop(&mut self) -> Result<ControlFlow, PipelineError> {
+    //     // let mut provider_rw = self.provider_factory.database_provider_rw()?;
+    //     // for stage_index in 1..self.stages.len() {
+    //     //     let stage = &self.stages[stage_index];
+    //     //     let stage_id = stage.id();
+    //     //     let mut checkpoint = provider_rw.get_stage_checkpoint(stage_id)?.unwrap_or_default();
+    //     //     if stage_index == 0 {
+    //     //         checkpoint.block_number = 
+    //     //     }
+    //     //     else if stage_index == 1 {
+    //     //         checkpoint.block_number = 1499999;
+    //     //     } else {
+    //     //         checkpoint.block_number = 0;
+    //     //     }
+    //     //     provider_rw.save_stage_checkpoint(stage_id, checkpoint)?;
+    //     // }
+    //     // provider_rw.save_finalized_block_number(0)?;
+
+    //     let block = self.find_min_previous_block_number()?; 
+    //     self.max_block = block.map_or(self.max_block, |block_value| {
+    //         self.max_block.map_or(
+    //             Some(block_value + 500000),
+    //             |max| Some(max.min(block_value + 500000))
+    //         )
+    //     });
+
+    //     info!(
+    //         target: "sync::pipeline",
+    //         ?block,
+    //         ?self.max_block,
+    //         "Minimum previous block number across all stages"
+    //     );
+
+    //     loop{
+    //         let next_action = self._run_loop().await?;
+
+    //         if next_action.is_unwind() && self.fail_on_unwind {
+    //             return Err(PipelineError::UnexpectedUnwind)
+    //         }
+
+    //         // Terminate the loop early if it's reached the maximum user
+    //         // configured block.
+    //         if next_action.should_continue() &&
+    //             self.progress
+    //                 .minimum_block_number
+    //                 .zip(self.progress.maximum_block_number)
+    //                 .is_some_and(|(progress, target)| progress == target)
+    //         {
+    //             debug!(
+    //                 target: "sync::pipeline",
+    //                 ?next_action,
+    //                 minimum_block_number = ?self.progress.minimum_block_number,
+    //                 max_block = ?self.max_block,
+    //                 "Terminating pipeline."
+    //             );
+    //             return Ok(next_action);
+    //         }
+    //         self.max_block = self.progress.minimum_block_number.map(|min| {
+    //             min + 500000
+    //         });
+    //         self.progress = PipelineProgress::default();
+    //     }
+    // }
+
+
+
     /// Performs one pass of the pipeline across all stages. After successful
     /// execution of each stage, it proceeds to commit it to the database.
     ///
@@ -211,6 +325,8 @@ impl<N: ProviderNodeTypes> Pipeline<N> {
             let stage_id = stage.id();
 
             trace!(target: "sync::pipeline", stage = %stage_id, "Executing stage");
+
+                
             let next = self.execute_stage_to_completion(previous_stage, stage_index).await?;
 
             trace!(target: "sync::pipeline", stage = %stage_id, ?next, "Completed stage");
@@ -227,6 +343,7 @@ impl<N: ProviderNodeTypes> Pipeline<N> {
                     return Ok(ControlFlow::Unwind { target, bad_block })
                 }
             }
+
 
             previous_stage = Some(
                 self.provider_factory
@@ -409,6 +526,17 @@ impl<N: ProviderNodeTypes> Pipeline<N> {
                     block_number: prev_checkpoint.map(|progress| progress.block_number),
                 })
             }
+
+            let target = match (prev_checkpoint, target) {
+                (Some(checkpoint), Some(target_block)) if target_block > checkpoint.block_number + 500000 => {
+                    // Calculate the next multiple of 500000 after checkpoint.block_number
+                    let next_multiple = ((checkpoint.block_number / 500000) + 1) * 500000;
+                    
+                    // Ensure we don't exceed the original target
+                    Some(next_multiple.min(target_block))
+                },
+                _ => target,
+            };
 
             let exec_input = ExecInput { target, checkpoint: prev_checkpoint };
 

@@ -99,10 +99,10 @@ impl<C: ChainSpecParser> EnvironmentArgs<C> {
         };
 
         let provider_factory = self.create_provider_factory(&config, db, sfp)?;
-        if access.is_read_write() {
-            debug!(target: "reth::cli", chain=%self.chain.chain(), genesis=?self.chain.genesis_hash(), "Initializing genesis");
-            init_genesis(&provider_factory)?;
-        }
+        // if access.is_read_write() {
+        //     debug!(target: "reth::cli", chain=%self.chain.chain(), genesis=?self.chain.genesis_hash(), "Initializing genesis");
+        //     init_genesis(&provider_factory)?;
+        // }
 
         Ok(Environment { config, provider_factory, data_dir })
     }
@@ -131,46 +131,46 @@ impl<C: ChainSpecParser> EnvironmentArgs<C> {
         )
         .with_prune_modes(prune_modes.clone());
 
-        // Check for consistency between database and static files.
-        if let Some(unwind_target) = factory
-            .static_file_provider()
-            .check_consistency(&factory.provider()?, has_receipt_pruning)?
-        {
-            if factory.db_ref().is_read_only()? {
-                warn!(target: "reth::cli", ?unwind_target, "Inconsistent storage. Restart node to heal.");
-                return Ok(factory)
-            }
+        // // Check for consistency between database and static files.
+        // if let Some(unwind_target) = factory
+        //     .static_file_provider()
+        //     .check_consistency(&factory.provider()?, has_receipt_pruning)?
+        // {
+        //     if factory.db_ref().is_read_only()? {
+        //         warn!(target: "reth::cli", ?unwind_target, "Inconsistent storage. Restart node to heal.");
+        //         return Ok(factory)
+        //     }
 
-            // Highly unlikely to happen, and given its destructive nature, it's better to panic
-            // instead.
-            assert_ne!(
-                unwind_target,
-                PipelineTarget::Unwind(0),
-                "A static file <> database inconsistency was found that would trigger an unwind to block 0"
-            );
+        //     // Highly unlikely to happen, and given its destructive nature, it's better to panic
+        //     // instead.
+        //     assert_ne!(
+        //         unwind_target,
+        //         PipelineTarget::Unwind(0),
+        //         "A static file <> database inconsistency was found that would trigger an unwind to block 0"
+        //     );
 
-            info!(target: "reth::cli", unwind_target = %unwind_target, "Executing an unwind after a failed storage consistency check.");
+        //     info!(target: "reth::cli", unwind_target = %unwind_target, "Executing an unwind after a failed storage consistency check.");
 
-            let (_tip_tx, tip_rx) = watch::channel(B256::ZERO);
+        //     let (_tip_tx, tip_rx) = watch::channel(B256::ZERO);
 
-            // Builds and executes an unwind-only pipeline
-            let mut pipeline = Pipeline::<NodeTypesWithDBAdapter<N, Arc<DatabaseEnv>>>::builder()
-                .add_stages(DefaultStages::new(
-                    factory.clone(),
-                    tip_rx,
-                    Arc::new(NoopConsensus::default()),
-                    NoopHeaderDownloader::default(),
-                    NoopBodiesDownloader::default(),
-                    NoopEvmConfig::<N::Evm>::default(),
-                    config.stages.clone(),
-                    prune_modes.clone(),
-                ))
-                .build(factory.clone(), StaticFileProducer::new(factory.clone(), prune_modes));
+        //     // Builds and executes an unwind-only pipeline
+        //     let mut pipeline = Pipeline::<NodeTypesWithDBAdapter<N, Arc<DatabaseEnv>>>::builder()
+        //         .add_stages(DefaultStages::new(
+        //             factory.clone(),
+        //             tip_rx,
+        //             Arc::new(NoopConsensus::default()),
+        //             NoopHeaderDownloader::default(),
+        //             NoopBodiesDownloader::default(),
+        //             NoopEvmConfig::<N::Evm>::default(),
+        //             config.stages.clone(),
+        //             prune_modes.clone(),
+        //         ))
+        //         .build(factory.clone(), StaticFileProducer::new(factory.clone(), prune_modes));
 
-            // Move all applicable data from database to static files.
-            pipeline.move_to_static_files()?;
-            pipeline.unwind(unwind_target.unwind_target().expect("should exist"), None)?;
-        }
+        //     // Move all applicable data from database to static files.
+        //     pipeline.move_to_static_files()?;
+        //     pipeline.unwind(unwind_target.unwind_target().expect("should exist"), None)?;
+        // }
 
         Ok(factory)
     }

@@ -4,6 +4,7 @@ use crate::{
     DatabaseError,
 };
 
+
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
@@ -72,9 +73,16 @@ pub trait Key: Encode + Decode + Ord + Clone + Serialize + for<'a> Deserialize<'
 impl<T> Key for T where T: Encode + Decode + Ord + Clone + Serialize + for<'a> Deserialize<'a> {}
 
 /// Generic trait that enforces the database value to implement [`Compress`] and [`Decompress`].
-pub trait Value: Compress + Decompress + Serialize {}
+pub trait ValueInner: Compress + Decompress + Serialize {}
 
-impl<T> Value for T where T: Compress + Decompress + Serialize {}
+/// Generic trait that enforces the database value to implement [`Compress`] and [`Decompress`].
+pub trait Value: ValueInner + for<'a> Deserialize<'a>{}
+
+impl<T> ValueInner for T where T: Compress + Decompress + Serialize {}
+
+impl<T> Value for T where T: ValueInner + for<'a> Deserialize<'a>{}
+
+
 
 /// Generic trait that a database table should follow.
 ///
@@ -122,6 +130,9 @@ pub trait DupSort: Table {
     ///
     /// Upstream docs: <https://libmdbx.dqdkfa.ru/usage.html#autotoc_md48>
     type SubKey: Key;
+    fn get_subkey(value: &Self::Value) -> Option<Self::SubKey> {
+        None
+    }
 }
 
 /// Allows duplicating tables across databases
@@ -163,6 +174,35 @@ pub trait TableImporter: DbTxMut {
         Ok(())
     }
 
+    /// Imports table data from another transaction within a range.
+    fn import_table_with_range_limit<T: Table, R: DbTx>(
+        &self,
+        source_tx: &R,
+        from: Option<<T as Table>::Key>,
+        limit: usize,
+        to: <T as Table>::Key,
+    ) -> Result<Option<<T as Table>::Key>, DatabaseError>
+    {
+        let mut destination_cursor = self.cursor_write::<T>()?;
+        let mut source_cursor = source_tx.cursor_read::<T>()?;
+
+        let source_range = match from {
+            Some(from) => source_cursor.walk_range(from..=to),
+            None => source_cursor.walk_range(..=to),
+        };
+        let mut count = 0;
+        for row in source_range? {
+            let (key, value) = row?;
+            if count >= limit {
+                return Ok(Some(key));
+            }
+            destination_cursor.append(key, &value)?;
+            count += 1;
+        }
+
+        Ok(None)
+    }
+
     /// Imports all dupsort data from another transaction.
     fn import_dupsort<T: DupSort, R: DbTx>(&self, source_tx: &R) -> Result<(), DatabaseError> {
         let mut destination_cursor = self.cursor_dup_write::<T>()?;
@@ -177,4 +217,51 @@ pub trait TableImporter: DbTxMut {
 
         Ok(())
     }
+
+    /// Imports table data from another transaction within a range.
+    fn import_dupsort_limit<T: DupSort, R: DbTx>(
+        &self,
+        source_tx: &R,
+        from_key: Option<<T as Table>::Key>,
+        from_subkey: Option<<T as DupSort>::SubKey>,
+        limit: usize,
+    ) -> Result<Option<(<T as Table>::Key, <T as DupSort>::SubKey)>, DatabaseError>
+    {
+        let mut destination_cursor = self.cursor_dup_write::<T>()?;
+        let mut source_cursor = source_tx.cursor_dup_read::<T>()?;
+
+        let mut count = 0;
+
+        if let Some(from_subkey) = from_subkey {
+            let from_key = from_key.unwrap_or_else(||{
+                destination_cursor.first().unwrap().unwrap().0
+            });
+            source_cursor.seek_by_key_subkey(from_key.clone(), from_subkey)?;
+
+            while let Some(v) = source_cursor.next_dup_val()? {
+                let sub_key = T::get_subkey(&v).unwrap();
+                destination_cursor.append_dup(from_key.clone(), v)?;
+                count += 1;
+                if count >= limit {
+                    return Ok(Some((from_key, sub_key)));
+                }
+            }
+        }
+
+        while let Some((k, _)) = source_cursor.next_no_dup()? {
+            for kv in source_cursor.walk_dup(Some(k), None)? {
+                let (k, v) = kv?;
+                let sub_key = T::get_subkey(&v).unwrap();
+                destination_cursor.append_dup(k.clone(), v)?;
+                count += 1;
+                if count >= limit {
+                    return Ok(Some((k, sub_key)));
+                }
+            }
+        }
+
+        Ok(None)
+    }
 }
+
+

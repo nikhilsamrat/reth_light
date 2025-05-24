@@ -1,0 +1,45 @@
+[prune]
+# Minimum pruning interval measured in blocks
+block_interval = 5
+
+[prune.segments]
+# Sender Recovery pruning configuration
+sender_recovery = { distance = 64 } # Prune all transaction senders before the block `head-100000`, i.e. keep transaction senders for the last 100001 blocks
+
+# Transaction Lookup pruning configuration
+transaction_lookup = "full" # Prune all TxNumber => TxHash mappings
+
+# Receipts pruning configuration. This setting overrides `receipts_log_filter`.
+receipts = { distance = 64 } # Prune all receipts from transactions before the block 1920000, i.e. keep receipts from the block 1920000
+
+# Account History pruning configuration
+account_history = { distance = 64 } # Prune all historical account states before the block `head-100000`
+
+# Storage History pruning configuration
+storage_history = { distance = 64 } # Prune all historical storage states before the block `head-100000`
+
+[stages.bodies]
+# The maximum number of bodies to request from a peer at a time.
+downloader_request_limit = 1000
+# The maximum amount of bodies to download before writing them to disk.
+#
+# A lower value means more frequent disk I/O (writes), but also
+# lowers memory usage.
+downloader_stream_batch_size = 10000
+# The size of the internal block buffer in bytes.
+#
+# A bigger buffer means that bandwidth can be saturated for longer periods,
+# but also increases memory consumption.
+#
+# If the buffer is full, no more requests will be made to peers until
+# space is made for new blocks in the buffer.
+#
+# Defaults to around 2GB.
+downloader_max_buffered_blocks_size_bytes = 2147483648
+# The minimum and maximum number of concurrent requests to have in flight at a time.
+#
+# The downloader uses these as best effort targets, which means that the number
+# of requests may be outside of these thresholds within a reasonable degree.
+#
+# Increase these for faster sync speeds at the cost of additional bandwidth and memory
+downloader_min_concurrent_requests = 16

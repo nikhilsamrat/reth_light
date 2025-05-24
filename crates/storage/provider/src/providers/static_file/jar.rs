@@ -16,7 +16,7 @@ use reth_db::static_file::{
 };
 use reth_db_api::{
     models::StoredBlockBodyIndices,
-    table::{Decompress, Value},
+    table::{Decompress, ValueInner},
 };
 use reth_node_types::{FullNodePrimitives, NodePrimitives};
 use reth_primitives_traits::{SealedHeader, SignedTransaction};
@@ -90,7 +90,7 @@ impl<'a, N: NodePrimitives> StaticFileJarProvider<'a, N> {
     }
 }
 
-impl<N: NodePrimitives<BlockHeader: Value>> HeaderProvider for StaticFileJarProvider<'_, N> {
+impl<N: NodePrimitives<BlockHeader: ValueInner>> HeaderProvider for StaticFileJarProvider<'_, N> {
     type Header = N::BlockHeader;
 
     fn header(&self, block_hash: &BlockHash) -> ProviderResult<Option<Self::Header>> {
@@ -369,7 +369,7 @@ impl<N: NodePrimitives> WithdrawalsProvider for StaticFileJarProvider<'_, N> {
     }
 }
 
-impl<N: FullNodePrimitives<BlockHeader: Value>> OmmersProvider for StaticFileJarProvider<'_, N> {
+impl<N: FullNodePrimitives<BlockHeader: ValueInner>> OmmersProvider for StaticFileJarProvider<'_, N> {
     fn ommers(&self, id: BlockHashOrNumber) -> ProviderResult<Option<Vec<Self::Header>>> {
         if let Some(num) = id.as_number() {
             return Ok(self

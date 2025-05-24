@@ -110,7 +110,7 @@ impl<K: Key> Decode for RawKey<K> {
 }
 
 /// Raw table value.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Serialize, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Serialize, Deserialize, Ord, Hash)]
 pub struct RawValue<V: Value> {
     /// Inner compressed value
     value: Vec<u8>,

@@ -87,6 +87,7 @@ impl<C: ChainSpecParser> Command<C> {
                 tx.clear::<tables::BlockOmmers<HeaderTy<N>>>()?;
                 tx.clear::<tables::BlockWithdrawals>()?;
                 reset_stage_checkpoint(tx, StageId::Bodies)?;
+                reset_stage_checkpoint(tx, StageId::Prune)?;
 
                 insert_genesis_header(&provider_rw, &self.env.chain)?;
             }
@@ -95,6 +96,7 @@ impl<C: ChainSpecParser> Command<C> {
                 // Reset pruned numbers to not count them in the next rerun's stage progress
                 reset_prune_checkpoint(tx, PruneSegment::SenderRecovery)?;
                 reset_stage_checkpoint(tx, StageId::SenderRecovery)?;
+                reset_stage_checkpoint(tx, StageId::PruneSenderRecovery)?;
             }
             StageEnum::Execution => {
                 tx.clear::<tables::PlainAccountState>()?;

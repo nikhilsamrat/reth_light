@@ -9,11 +9,13 @@ use reth_exex_types::FinishedExExHeight;
 use reth_provider::{
     DBProvider, DatabaseProviderFactory, PruneCheckpointReader, PruneCheckpointWriter,
 };
+use reth_provider::StaticFileProviderFactory;
+
 use reth_prune_types::{PruneProgress, PrunedSegmentInfo, PrunerOutput};
 use reth_tokio_util::{EventSender, EventStream};
 use std::time::{Duration, Instant};
 use tokio::sync::watch;
-use tracing::debug;
+use tracing::{debug, warn};
 
 /// Result of [`Pruner::run`] execution.
 pub type PrunerResult = Result<PrunerOutput, PrunerError>;
@@ -318,7 +320,7 @@ where
 
 impl<PF> Pruner<PF::ProviderRW, PF>
 where
-    PF: DatabaseProviderFactory<ProviderRW: PruneCheckpointWriter + PruneCheckpointReader>,
+    PF: DatabaseProviderFactory<ProviderRW: PruneCheckpointWriter + PruneCheckpointReader> + StaticFileProviderFactory,
 {
     /// Run the pruner. This will only prune data up to the highest finished ExEx height, if there
     /// are no ExExes.
@@ -327,9 +329,19 @@ where
     /// to prune.
     pub fn run(&mut self, tip_block_number: BlockNumber) -> PrunerResult {
         let provider = self.provider_factory.database_provider_rw()?;
-        let result = self.run_with_provider(&provider, tip_block_number);
+        let result = self.run_with_provider(&provider, tip_block_number)?;
         provider.commit()?;
-        result
+        if result.progress.is_finished() {
+            let sfp = self.provider_factory.static_file_provider();
+            let range = sfp.find_fixed_range(tip_block_number);
+            let blocks_for_file = range.end() - range.start() + 1;
+            for i in (0..(tip_block_number-blocks_for_file)).step_by(blocks_for_file.try_into().unwrap()) {
+                if let Err(err) = sfp.delete_tx_jar_force(i) {
+                    warn!("Failed to delete tx jar {}: {}", i, err);
+                }
+            }
+        }
+        Ok(result)
     }
 }
 

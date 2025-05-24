@@ -29,7 +29,7 @@ use reth_db::{
 use reth_db_api::{
     cursor::DbCursorRO,
     models::StoredBlockBodyIndices,
-    table::{Decompress, Table, Value},
+    table::{Decompress, Table, ValueInner},
     tables,
     transaction::DbTx,
 };
@@ -446,6 +446,45 @@ impl<N: NodePrimitives> StaticFileProvider<N> {
         Ok(())
     }
 
+    /// Given a segment and block, it deletes the jar and all files from the respective block range.
+    ///
+    /// CAUTION: destructive. Deletes files on disk.
+    pub fn delete_jar_force(&self, segment: StaticFileSegment, block: BlockNumber) -> ProviderResult<()> {
+        let fixed_block_range = self.find_fixed_range(block);
+        let key = (fixed_block_range.end(), segment);
+        let jar = if let Some((_, jar)) = self.map.remove(&key) {
+            jar.jar
+        } else {
+            NippyJar::<SegmentHeader>::load(&self.path.join(segment.filename(&fixed_block_range)))
+                .map_err(ProviderError::other)?
+        };
+
+        jar.move_delete().map_err(ProviderError::other)?;
+
+        let mut segment_max_block = None;
+        if fixed_block_range.start() > 0 {
+            segment_max_block = Some(fixed_block_range.start() - 1)
+        };
+        self.update_index(segment, segment_max_block)?;
+
+        Ok(())
+    }
+
+    /// Given a segment and block, it deletes the jar and all files from the respective block range.
+    ///
+    /// CAUTION: destructive. Deletes files on disk.
+    pub fn delete_header_jar_force(&self, block: BlockNumber) -> ProviderResult<()> {
+        self.delete_jar_force(StaticFileSegment::Headers, block)
+    }
+
+       /// Given a segment and block, it deletes the jar and all files from the respective block range.
+    ///
+    /// CAUTION: destructive. Deletes files on disk.
+    pub fn delete_tx_jar_force(&self, block: BlockNumber) -> ProviderResult<()> {
+        self.delete_jar_force(StaticFileSegment::Transactions, block)
+        .and_then(|_| self.delete_jar_force(StaticFileSegment::Receipts, block))
+    }
+
     /// Given a segment and block range it returns a cached
     /// [`StaticFileJarProvider`]. TODO(joshie): we should check the size and pop N if there's too
     /// many.
@@ -662,7 +701,7 @@ impl<N: NodePrimitives> StaticFileProvider<N> {
     ) -> ProviderResult<Option<PipelineTarget>>
     where
         Provider: DBProvider + BlockReader + StageCheckpointReader + ChainSpecProvider,
-        N: NodePrimitives<Receipt: Value, BlockHeader: Value, SignedTx: Value>,
+        N: NodePrimitives<Receipt: ValueInner, BlockHeader: ValueInner, SignedTx: ValueInner>,
     {
         // OVM historical import is broken and does not work with this check. It's importing
         // duplicated receipts resulting in having more receipts than the expected transaction
@@ -1260,7 +1299,7 @@ impl<N: NodePrimitives> StaticFileWriter for StaticFileProvider<N> {
     }
 }
 
-impl<N: NodePrimitives<BlockHeader: Value>> HeaderProvider for StaticFileProvider<N> {
+impl<N: NodePrimitives<BlockHeader: ValueInner>> HeaderProvider for StaticFileProvider<N> {
     type Header = N::BlockHeader;
 
     fn header(&self, block_hash: &BlockHash) -> ProviderResult<Option<Self::Header>> {
@@ -1374,7 +1413,7 @@ impl<N: NodePrimitives> BlockHashReader for StaticFileProvider<N> {
     }
 }
 
-impl<N: NodePrimitives<SignedTx: Value + SignedTransaction, Receipt: Value>> ReceiptProvider
+impl<N: NodePrimitives<SignedTx: ValueInner + SignedTransaction, Receipt: ValueInner>> ReceiptProvider
     for StaticFileProvider<N>
 {
     type Receipt = N::Receipt;
@@ -1418,7 +1457,7 @@ impl<N: NodePrimitives<SignedTx: Value + SignedTransaction, Receipt: Value>> Rec
     }
 }
 
-impl<N: FullNodePrimitives<SignedTx: Value, Receipt: Value, BlockHeader: Value>>
+impl<N: FullNodePrimitives<SignedTx: ValueInner, Receipt: ValueInner, BlockHeader: ValueInner>>
     TransactionsProviderExt for StaticFileProvider<N>
 {
     fn transaction_hashes_by_range(
@@ -1618,7 +1657,7 @@ impl<N: NodePrimitives> BlockNumReader for StaticFileProvider<N> {
     }
 }
 
-impl<N: FullNodePrimitives<SignedTx: Value, Receipt: Value, BlockHeader: Value>> BlockReader
+impl<N: FullNodePrimitives<SignedTx: ValueInner, Receipt: ValueInner, BlockHeader: ValueInner>> BlockReader
     for StaticFileProvider<N>
 {
     type Block = N::Block;
@@ -1715,7 +1754,7 @@ impl<N: NodePrimitives> WithdrawalsProvider for StaticFileProvider<N> {
     }
 }
 
-impl<N: FullNodePrimitives<BlockHeader: Value>> OmmersProvider for StaticFileProvider<N> {
+impl<N: FullNodePrimitives<BlockHeader: ValueInner>> OmmersProvider for StaticFileProvider<N> {
     fn ommers(&self, id: BlockHashOrNumber) -> ProviderResult<Option<Vec<Self::Header>>> {
         if let Some(num) = id.as_number() {
             return self

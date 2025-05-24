@@ -11,6 +11,7 @@ use reth_stages_api::{
     ExecInput, ExecOutput, Stage, StageCheckpoint, StageError, StageId, UnwindInput, UnwindOutput,
 };
 use tracing::info;
+use tracing::warn;
 
 /// The prune stage that runs the pruner with the provided prune modes.
 ///
@@ -56,6 +57,16 @@ where
 
         let result = pruner.run_with_provider(provider, input.target())?;
         if result.progress.is_finished() {
+            if !self.prune_modes.has_sender_pruning() {
+                let sfp = provider.static_file_provider();
+                let range = sfp.find_fixed_range(input.target());
+                let blocks_for_file = range.end() - range.start() + 1;
+                for i in (0..input.target()).step_by(blocks_for_file.try_into().unwrap()) {
+                    if let Err(err) = sfp.delete_tx_jar_force(i) {
+                        warn!("Failed to delete tx jar {}: {}", i, err);
+                    }
+                }
+            }
             Ok(ExecOutput { checkpoint: StageCheckpoint::new(input.target()), done: true })
         } else {
             if let Some((last_segment, last_segment_output)) = result.segments.last() {
@@ -150,6 +161,13 @@ where
             // transactions and senders
             result.checkpoint = StageCheckpoint::new(checkpoint.block_number.unwrap_or_default());
         }
+
+        // let sfp = provider.static_file_provider();
+        // let range = sfp.find_fixed_range(input.target());
+        // let blocks_for_file = range.end() - range.start() + 1;
+        // for i in (0..input.target()).step_by(blocks_for_file.try_into().unwrap()) {
+        //     sfp.delete_header_jar_force(i).map_err(|err| StageError::Fatal(Box::new(err)))?;
+        // }   
 
         Ok(result)
     }

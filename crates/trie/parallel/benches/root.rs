@@ -14,10 +14,12 @@ use reth_trie::{
 use reth_trie_db::{DatabaseHashedCursorFactory, DatabaseStateRoot};
 use reth_trie_parallel::root::ParallelStateRoot;
 use std::collections::HashMap;
+use std::time::Duration;
 
 pub fn calculate_state_root(c: &mut Criterion) {
     let mut group = c.benchmark_group("Calculate State Root");
-    group.sample_size(20);
+    group.sample_size(10);
+    group.measurement_time(Duration::from_secs(60));
 
     for size in [1_000, 3_000, 5_000, 10_000] {
         // Too slow.
