@@ -206,6 +206,12 @@ pub fn get_bit_size(ftype: &str) -> u8 {
         "u64" | "BlockNumber" | "TxNumber" | "ChainId" | "NumTransactions" => 4,
         "u128" => 5,
         "U256" => 6,
+        "U24" => 3,
+        "U112" => 6,
+        "U128" => 6,
+        "U160" => 6,
+        "I24" => 3,
+        "I128" => 6,
         _ => 0,
     }
 }

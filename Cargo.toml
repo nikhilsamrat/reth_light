@@ -465,7 +465,7 @@ alloy-chains = { version = "0.2.0", default-features = false }
 alloy-dyn-abi = "1.1.0"
 alloy-eip2124 = { version = "0.2.0", default-features = false }
 alloy-evm = { version = "0.10", default-features = false }
-alloy-primitives = { version = "1.1.0", default-features = false, features = ["map-foldhash"] }
+alloy-primitives = { version = "1.2.0", default-features = false, features = ["map-foldhash"] }
 alloy-rlp = { version = "0.3.10", default-features = false, features = ["core-net"] }
 alloy-sol-macro = "1.1.0"
 alloy-sol-types = { version = "1.1.0", default-features = false }

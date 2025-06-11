@@ -57,16 +57,16 @@ where
 
         let result = pruner.run_with_provider(provider, input.target())?;
         if result.progress.is_finished() {
-            if !self.prune_modes.has_sender_pruning() {
-                let sfp = provider.static_file_provider();
-                let range = sfp.find_fixed_range(input.target());
-                let blocks_for_file = range.end() - range.start() + 1;
-                for i in (0..input.target()).step_by(blocks_for_file.try_into().unwrap()) {
-                    if let Err(err) = sfp.delete_tx_jar_force(i) {
-                        warn!("Failed to delete tx jar {}: {}", i, err);
-                    }
-                }
-            }
+            // if !self.prune_modes.has_sender_pruning() {
+            //     let sfp = provider.static_file_provider();
+            //     let range = sfp.find_fixed_range(input.target());
+            //     let blocks_for_file = range.end() - range.start() + 1;
+            //     for i in (0..input.target()).step_by(blocks_for_file.try_into().unwrap()) {
+            //         if let Err(err) = sfp.delete_tx_jar_force(i) {
+            //             warn!("Failed to delete tx jar {}: {}", i, err);
+            //         }
+            //     }
+            // }
             Ok(ExecOutput { checkpoint: StageCheckpoint::new(input.target()), done: true })
         } else {
             if let Some((last_segment, last_segment_output)) = result.segments.last() {

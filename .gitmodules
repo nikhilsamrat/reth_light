@@ -1,0 +1,21 @@
+[submodule "bin/exex/contracts/lib/forge-std"]
+	path = bin/exex/contracts/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
+[submodule "bin/exex/contracts/contracts/lib/forge-std"]
+	path = bin/exex/contracts/contracts/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
+[submodule "bin/exex/bindings/uniswap-v2/lib/forge-std"]
+	path = bin/exex/bindings/uniswap-v2/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
+[submodule "bin/exex/bindings/uniswap-v3/lib/forge-std"]
+	path = bin/exex/bindings/uniswap-v3/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
+[submodule "bin/exex/bindings/pancake-v3/lib/forge-std"]
+	path = bin/exex/bindings/pancake-v3/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
+[submodule "bin/exex/bindings/pancake-v2/lib/forge-std"]
+	path = bin/exex/bindings/pancake-v2/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
+[submodule "bin/exex/bindings/uniswap-v4/lib/forge-std"]
+	path = bin/exex/bindings/uniswap-v4/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std

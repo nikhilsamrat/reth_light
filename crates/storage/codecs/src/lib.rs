@@ -22,7 +22,7 @@ extern crate alloc;
 pub use reth_codecs_derive::*;
 use serde as _;
 
-use alloy_primitives::{Address, Bloom, Bytes, FixedBytes, U256};
+use alloy_primitives::{Address, Bloom, Bytes, FixedBytes, U256, aliases::{I24, I128, U24, U112, U128, U160}};
 use bytes::{Buf, BufMut};
 
 use alloc::{
@@ -247,7 +247,7 @@ where
         let mut tmp: Vec<u8> = Vec::with_capacity(64);
 
         for element in *self {
-            tmp.clear();
+            tmp.clear();    
 
             // We don't know the length until we compact it
             let length = element.to_compact(&mut tmp);
@@ -372,30 +372,153 @@ impl<T: Compact + ToOwned<Owned = T>> Compact for Cow<'_, T> {
     }
 }
 
-impl Compact for U256 {
-    #[inline]
-    fn to_compact<B>(&self, buf: &mut B) -> usize
-    where
-        B: bytes::BufMut + AsMut<[u8]>,
-    {
-        let inner = self.to_be_bytes::<32>();
-        let size = 32 - (self.leading_zeros() / 8);
-        buf.put_slice(&inner[32 - size..]);
-        size
-    }
+macro_rules! impl_compact_for_uint {
+    ($type:ty, $bits:expr) => {
+        impl Compact for $type {
+            #[inline]
+            fn to_compact<B>(&self, buf: &mut B) -> usize
+            where
+                B: bytes::BufMut + AsMut<[u8]>,
+            {
+                let bytes = ($bits / 8) as usize;
+                let inner = self.to_be_bytes::<{ $bits / 8 }>();
+                let size = bytes.saturating_sub((self.leading_zeros() / 8) as usize);
+                buf.put_slice(&inner[bytes - size..]);
+                size
+            }
 
-    #[inline]
-    fn from_compact(mut buf: &[u8], len: usize) -> (Self, &[u8]) {
-        if len == 0 {
-            return (Self::ZERO, buf)
+            #[inline]
+            fn from_compact(mut buf: &[u8], len: usize) -> (Self, &[u8]) {
+                if len == 0 {
+                    return (Self::ZERO, buf);
+                }
+
+                let bytes = ($bits / 8) as usize;
+                let mut arr = [0; $bits / 8];
+                arr[bytes - len..].copy_from_slice(&buf[..len]);
+                buf.advance(len);
+                (Self::from_be_bytes::<{ $bits / 8 }>(arr), buf)
+            }
         }
-
-        let mut arr = [0; 32];
-        arr[(32 - len)..].copy_from_slice(&buf[..len]);
-        buf.advance(len);
-        (Self::from_be_bytes(arr), buf)
-    }
+    };
 }
+
+impl_compact_for_uint!(U256, 256);
+
+impl_compact_for_uint!(U24, 24);
+
+impl_compact_for_uint!(U112, 112);
+
+impl_compact_for_uint!(U128, 128);
+
+impl_compact_for_uint!(U160, 160);
+
+impl_compact_for_uint!(I24, 24);
+
+impl_compact_for_uint!(I128, 128);
+
+
+
+// impl Compact for U256 {
+//     #[inline]
+//     fn to_compact<B>(&self, buf: &mut B) -> usize
+//     where
+//         B: bytes::BufMut + AsMut<[u8]>,
+//     {
+//         let inner = self.to_be_bytes::<32>();
+//         let size = 32 - (self.leading_zeros() / 8);
+//         buf.put_slice(&inner[32 - size..]);
+//         size
+//     }
+
+//     #[inline]
+//     fn from_compact(mut buf: &[u8], len: usize) -> (Self, &[u8]) {
+//         if len == 0 {
+//             return (Self::ZERO, buf)
+//         }
+
+//         let mut arr = [0; 32];
+//         arr[(32 - len)..].copy_from_slice(&buf[..len]);
+//         buf.advance(len);
+//         (Self::from_be_bytes(arr), buf)
+//     }
+// }
+
+// impl Compact for U24 {
+//     #[inline]
+//     fn to_compact<B>(&self, buf: &mut B) -> usize
+//     where
+//         B: bytes::BufMut + AsMut<[u8]>,
+//     {
+//         let inner = self.to_be_bytes::<3>();
+//         let size = 3 - (self.leading_zeros() / 8);
+//         buf.put_slice(&inner[3 - size..]);
+//         size
+//     }
+
+//     #[inline]
+//     fn from_compact(mut buf: &[u8], len: usize) -> (Self, &[u8]) {
+//         if len == 0 {
+//             return (Self::ZERO, buf)
+//         }
+
+//         let mut arr = [0; 3];
+//         arr[(3 - len)..].copy_from_slice(&buf[..len]);
+//         buf.advance(len);
+//         (Self::from_be_bytes(arr), buf)
+//     }
+// }
+
+// impl Compact for I24 {
+//     #[inline]
+//     fn to_compact<B>(&self, buf: &mut B) -> usize
+//     where
+//         B: bytes::BufMut + AsMut<[u8]>,
+//     {
+//         let inner = self.to_be_bytes::<3>();
+//         let size = 3 - (self.leading_zeros() / 8);
+//         buf.put_slice(&inner[3 - size..]);
+//         size
+//     }
+
+//     #[inline]
+//     fn from_compact(mut buf: &[u8], len: usize) -> (Self, &[u8]) {
+//         if len == 0 {
+//             return (Self::ZERO, buf)
+//         }
+
+//         let mut arr = [0; 3];
+//         arr[(3 - len)..].copy_from_slice(&buf[..len]);
+//         buf.advance(len);
+//         (Self::from_be_bytes(arr), buf)
+//     }
+// }
+
+
+// impl Compact for U160 {
+//     #[inline]
+//     fn to_compact<B>(&self, buf: &mut B) -> usize
+//     where
+//         B: bytes::BufMut + AsMut<[u8]>,
+//     {
+//         let inner = self.to_be_bytes::<20>();
+//         let size = 20 - (self.leading_zeros() / 8);
+//         buf.put_slice(&inner[20 - size..]);
+//         size
+//     }
+
+//     #[inline]
+//     fn from_compact(mut buf: &[u8], len: usize) -> (Self, &[u8]) {
+//         if len == 0 {
+//             return (Self::ZERO, buf)
+//         }
+
+//         let mut arr = [0; 20];
+//         arr[(20 - len)..].copy_from_slice(&buf[..len]);
+//         buf.advance(len);
+//         (Self::from_be_bytes(arr), buf)
+//     }
+// }
 
 impl Compact for Bytes {
     #[inline]

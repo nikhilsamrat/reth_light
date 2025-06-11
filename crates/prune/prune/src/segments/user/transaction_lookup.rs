@@ -53,38 +53,40 @@ where
                 .unwrap();
         let tx_range_end = *tx_range.end();
 
-        // Retrieve transactions in the range and calculate their hashes in parallel
-        let hashes = provider
-            .transactions_by_tx_range(tx_range.clone())?
-            .into_par_iter()
-            .map(|transaction| transaction.trie_hash())
-            .collect::<Vec<_>>();
+        // // Retrieve transactions in the range and calculate their hashes in parallel
+        // let hashes = provider
+        //     .transactions_by_tx_range(tx_range.clone())?
+        //     .into_par_iter()
+        //     .map(|transaction| transaction.trie_hash())
+        //     .collect::<Vec<_>>();
 
-        // Number of transactions retrieved from the database should match the tx range count
-        let tx_count = tx_range.count();
-        if hashes.len() != tx_count {
-            return Err(PrunerError::InconsistentData(
-                "Unexpected number of transaction hashes retrieved by transaction number range",
-            ))
-        }
+        // // Number of transactions retrieved from the database should match the tx range count
+        // let tx_count = tx_range.count();
+        // if hashes.len() != tx_count {
+        //     return Err(PrunerError::InconsistentData(
+        //         "Unexpected number of transaction hashes retrieved by transaction number range",
+        //     ))
+        // }
 
         let mut limiter = input.limiter;
 
-        let mut last_pruned_transaction = None;
-        let (pruned, done) =
-            provider.tx_ref().prune_table_with_iterator::<tables::TransactionHashNumbers>(
-                hashes,
-                &mut limiter,
-                |row| {
-                    last_pruned_transaction =
-                        Some(last_pruned_transaction.unwrap_or(row.1).max(row.1))
-                },
-            )?;
+        // let mut last_pruned_transaction = None;
+        // let (pruned, done) =
+        //     provider.tx_ref().prune_table_with_iterator::<tables::TransactionHashNumbers>(
+        //         hashes,
+        //         &mut limiter,
+        //         |row| {
+        //             last_pruned_transaction =
+        //                 Some(last_pruned_transaction.unwrap_or(row.1).max(row.1))
+        //         },
+        //     )?;
 
-        let done = done && tx_range_end == end;
-        trace!(target: "pruner", %pruned, %done, "Pruned transaction lookup");
+        // let done = done && tx_range_end == end;
+        let done = true;
+        let pruned = 0;
+        // trace!(target: "pruner", %pruned, %done, "Pruned transaction lookup");
 
-        let last_pruned_transaction = last_pruned_transaction.unwrap_or(tx_range_end);
+        let last_pruned_transaction = None.unwrap_or(tx_range_end);
 
         let last_pruned_block = provider
             .transaction_block(last_pruned_transaction)?

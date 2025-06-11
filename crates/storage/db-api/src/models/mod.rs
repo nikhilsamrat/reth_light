@@ -6,7 +6,7 @@ use crate::{
 };
 use alloy_consensus::Header;
 use alloy_genesis::GenesisAccount;
-use alloy_primitives::{Address, Bytes, Log, B256, U256};
+use alloy_primitives::{Address, Bytes, Log, B256, U256, aliases::I24};
 use reth_codecs::{add_arbitrary_tests, Compact};
 use reth_ethereum_primitives::{Receipt, TransactionSigned, TxType};
 use reth_primitives_traits::{Account, Bytecode, StorageEntry};
@@ -56,6 +56,24 @@ macro_rules! impl_uints {
 }
 
 impl_uints!(u64, u32, u16, u8);
+
+impl Encode for I24 {
+    type Encoded = [u8; 3];
+
+    fn encode(self) -> Self::Encoded {
+        self.to_be_bytes::<3>()
+    }
+}
+
+impl Decode for I24 {
+    fn decode(value: &[u8]) -> Result<Self, DatabaseError> {
+        Ok(
+            I24::from_be_bytes::<3>(
+                value.try_into().map_err(|_| crate::DatabaseError::Decode)?
+            )
+        )
+    }
+}
 
 impl Encode for Vec<u8> {
     type Encoded = Self;
@@ -188,6 +206,7 @@ impl Decode for ClientVersion {
     }
 }
 
+#[macro_export]
 /// Implements compression for Compact type.
 macro_rules! impl_compression_for_compact {
     ($($name:ident$(<$($generic:ident),*>)?),+) => {
@@ -245,6 +264,7 @@ mod op {
     impl_compression_for_compact!(OpTransactionSigned, OpReceipt);
 }
 
+#[macro_export]
 macro_rules! impl_compression_fixed_compact {
     ($($name:tt),+) => {
         $(
