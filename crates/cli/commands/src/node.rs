@@ -10,8 +10,8 @@ use reth_db::init_db;
 use reth_node_builder::NodeBuilder;
 use reth_node_core::{
     args::{
-        DatabaseArgs, DatadirArgs, DebugArgs, DevArgs, EngineArgs, NetworkArgs, PayloadBuilderArgs,
-        PruningArgs, RpcServerArgs, TxPoolArgs,
+        DatabaseArgs, DatadirArgs, DebugArgs, DevArgs, EngineArgs, EraArgs, NetworkArgs,
+        PayloadBuilderArgs, PruningArgs, RpcServerArgs, TxPoolArgs,
     },
     node_config::NodeConfig,
     version,
@@ -32,7 +32,7 @@ pub struct NodeCommand<C: ChainSpecParser, Ext: clap::Args + fmt::Debug = NoArgs
         long,
         value_name = "CHAIN_OR_PATH",
         long_help = C::help_message(),
-        default_value = C::SUPPORTED_CHAINS[0],
+        default_value = C::default_value(),
         default_value_if("dev", "true", "dev"),
         value_parser = C::parser(),
         required = false,
@@ -59,7 +59,7 @@ pub struct NodeCommand<C: ChainSpecParser, Ext: clap::Args + fmt::Debug = NoArgs
     /// - `HTTP_RPC_PORT`: default - `instance` + 1
     /// - `WS_RPC_PORT`: default + `instance` * 2 - 2
     /// - `IPC_PATH`: default + `-instance`
-    #[arg(long, value_name = "INSTANCE", global = true, value_parser = value_parser!(u16).range(..=200))]
+    #[arg(long, value_name = "INSTANCE", global = true, value_parser = value_parser!(u16).range(1..=200))]
     pub instance: Option<u16>,
 
     /// Sets all ports to unused, allowing the OS to choose random unused ports when sockets are
@@ -109,6 +109,10 @@ pub struct NodeCommand<C: ChainSpecParser, Ext: clap::Args + fmt::Debug = NoArgs
     #[command(flatten, next_help_heading = "Engine")]
     pub engine: EngineArgs,
 
+    /// All ERA related arguments with --era prefix
+    #[command(flatten, next_help_heading = "ERA")]
+    pub era: EraArgs,
+
     /// Additional cli arguments
     #[command(flatten, next_help_heading = "Extension")]
     pub ext: Ext,
@@ -144,7 +148,7 @@ where
     where
         L: Launcher<C, Ext>,
     {
-        tracing::info!(target: "reth::cli", version = ?version::SHORT_VERSION, "Starting reth");
+        tracing::info!(target: "reth::cli", version = ?version::version_metadata().short_version, "Starting reth");
 
         let Self {
             datadir,
@@ -163,6 +167,7 @@ where
             pruning,
             ext,
             engine,
+            era,
         } = self;
 
         // set up node config
@@ -181,6 +186,7 @@ where
             dev,
             pruning,
             engine,
+            era,
         };
 
         let data_dir = node_config.datadir();
@@ -207,6 +213,7 @@ impl<C: ChainSpecParser, Ext: clap::Args + fmt::Debug> NodeCommand<C, Ext> {
         Some(&self.chain)
     }
 }
+
 /// No Additional arguments
 #[derive(Debug, Clone, Copy, Default, Args)]
 #[non_exhaustive]

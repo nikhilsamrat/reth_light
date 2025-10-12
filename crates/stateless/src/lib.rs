@@ -29,7 +29,7 @@
     html_favicon_url = "https://avatars0.githubusercontent.com/u/97369466?s=256",
     issue_tracker_base_url = "https://github.com/paradigmxyz/reth/issues/"
 )]
-#![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 #![no_std]
 
@@ -37,6 +37,12 @@ extern crate alloc;
 
 /// Sparse trie implementation for stateless validation
 pub mod trie;
+
+#[doc(inline)]
+pub use trie::StatelessTrie;
+#[doc(inline)]
+pub use validation::stateless_validation_with_trie;
+
 /// Implementation of stateless validation
 pub mod validation;
 pub(crate) mod witness_db;

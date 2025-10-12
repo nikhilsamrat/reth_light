@@ -4,8 +4,8 @@ use alloy_primitives::{keccak256, Address, BlockNumber, Bytes, StorageKey, Stora
 use reth_errors::ProviderResult;
 use reth_primitives_traits::{Account, Bytecode, NodePrimitives};
 use reth_storage_api::{
-    AccountReader, BlockHashReader, HashedPostStateProvider, StateProofProvider, StateProvider,
-    StateRootProvider, StorageRootProvider,
+    AccountReader, BlockHashReader, BytecodeReader, HashedPostStateProvider, StateProofProvider,
+    StateProvider, StateRootProvider, StorageRootProvider,
 };
 use reth_trie::{
     updates::TrieUpdates, AccountProof, HashedPostState, HashedStorage, MultiProof,
@@ -21,7 +21,7 @@ pub struct MemoryOverlayStateProviderRef<
     'a,
     N: NodePrimitives = reth_ethereum_primitives::EthPrimitives,
 > {
-    /// Historical state provider for state lookups that are not found in in-memory blocks.
+    /// Historical state provider for state lookups that are not found in memory blocks.
     pub(crate) historical: Box<dyn StateProvider + 'a>,
     /// The collection of executed parent blocks. Expected order is newest to oldest.
     pub(crate) in_memory: Vec<ExecutedBlockWithTrieUpdates<N>>,
@@ -84,13 +84,21 @@ impl<N: NodePrimitives> BlockHashReader for MemoryOverlayStateProviderRef<'_, N>
     ) -> ProviderResult<Vec<B256>> {
         let range = start..end;
         let mut earliest_block_number = None;
-        let mut in_memory_hashes = Vec::new();
+        let mut in_memory_hashes = Vec::with_capacity(range.size_hint().0);
+
+        // iterate in ascending order (oldest to newest = low to high)
         for block in &self.in_memory {
-            if range.contains(&block.recovered_block().number()) {
-                in_memory_hashes.insert(0, block.recovered_block().hash());
-                earliest_block_number = Some(block.recovered_block().number());
+            let block_num = block.recovered_block().number();
+            if range.contains(&block_num) {
+                in_memory_hashes.push(block.recovered_block().hash());
+                earliest_block_number = Some(block_num);
             }
         }
+
+        // `self.in_memory` stores executed blocks in ascending order (oldest to newest).
+        // However, `in_memory_hashes` should be constructed in descending order (newest to oldest),
+        // so we reverse the vector after collecting the hashes.
+        in_memory_hashes.reverse();
 
         let mut hashes =
             self.historical.canonical_hashes_range(start, earliest_block_number.unwrap_or(end))?;
@@ -222,7 +230,9 @@ impl<N: NodePrimitives> StateProvider for MemoryOverlayStateProviderRef<'_, N> {
 
         self.historical.storage(address, storage_key)
     }
+}
 
+impl<N: NodePrimitives> BytecodeReader for MemoryOverlayStateProviderRef<'_, N> {
     fn bytecode_by_hash(&self, code_hash: &B256) -> ProviderResult<Option<Bytecode>> {
         for block in &self.in_memory {
             if let Some(contract) = block.execution_output.bytecode(code_hash) {

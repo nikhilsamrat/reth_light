@@ -15,6 +15,7 @@ mod get;
 mod set;
 mod dump;
 mod list;
+mod repair_trie;
 mod stats;
 /// DB List TUI
 mod tui;
@@ -54,6 +55,8 @@ pub enum Subcommands {
     },
     /// Deletes all table entries
     Clear(clear::Command),
+    /// Verifies trie consistency and outputs any inconsistencies
+    RepairTrie(repair_trie::Command),
     /// Lists current and local database versions
     Version,
     /// Returns the full database path
@@ -65,7 +68,7 @@ macro_rules! db_ro_exec {
     ($env:expr, $tool:ident, $N:ident, $command:block) => {
         let Environment { provider_factory, .. } = $env.init::<$N>(AccessRights::RO)?;
 
-        let $tool = DbTool::new(provider_factory.clone())?;
+        let $tool = DbTool::new(provider_factory)?;
         $command;
     };
 }
@@ -148,6 +151,12 @@ impl<C: ChainSpecParser<ChainSpec: EthChainSpec + EthereumHardforks>> Command<C>
             }
             Subcommands::Clear(command) => {
                 let Environment { provider_factory, .. } = self.env.init::<N>(AccessRights::RW)?;
+                command.execute(provider_factory)?;
+            }
+            Subcommands::RepairTrie(command) => {
+                let access_rights =
+                    if command.dry_run { AccessRights::RO } else { AccessRights::RW };
+                let Environment { provider_factory, .. } = self.env.init::<N>(access_rights)?;
                 command.execute(provider_factory)?;
             }
             Subcommands::Version => {
