@@ -158,20 +158,20 @@ impl<C: ChainSpecParser> EnvironmentArgs<C> {
 
         //     let (_tip_tx, tip_rx) = watch::channel(B256::ZERO);
 
-            // Builds and executes an unwind-only pipeline
-            let mut pipeline = Pipeline::<NodeTypesWithDBAdapter<N, Arc<DatabaseEnv>>>::builder()
-                .add_stages(DefaultStages::new(
-                    factory.clone(),
-                    tip_rx,
-                    Arc::new(NoopConsensus::default()),
-                    NoopHeaderDownloader::default(),
-                    NoopBodiesDownloader::default(),
-                    NoopEvmConfig::<N::Evm>::default(),
-                    config.stages.clone(),
-                    prune_modes.clone(),
-                    None,
-                ))
-                .build(factory.clone(), StaticFileProducer::new(factory.clone(), prune_modes));
+        //     // Builds and executes an unwind-only pipeline
+        //     let mut pipeline = Pipeline::<NodeTypesWithDBAdapter<N, Arc<DatabaseEnv>>>::builder()
+        //         .add_stages(DefaultStages::new(
+        //             factory.clone(),
+        //             tip_rx,
+        //             Arc::new(NoopConsensus::default()),
+        //             NoopHeaderDownloader::default(),
+        //             NoopBodiesDownloader::default(),
+        //             NoopEvmConfig::<N::Evm>::default(),
+        //             config.stages.clone(),
+        //             prune_modes.clone(),
+        //             None,
+        //         ))
+        //         .build(factory.clone(), StaticFileProducer::new(factory.clone(), prune_modes));
 
         //     // Move all applicable data from database to static files.
         //     pipeline.move_to_static_files()?;
