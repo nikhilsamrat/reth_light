@@ -20,6 +20,7 @@ reth-primitives-traits = { workspace = true, features = ["rpc-compat"] }
 reth-errors.workspace = true
 reth-evm.workspace = true
 reth-storage-api.workspace = true
+reth-storage-errors.workspace = true
 reth-revm.workspace = true
 reth-rpc-convert.workspace = true
 reth-tasks = { workspace = true, features = ["rayon"] }
@@ -58,6 +59,10 @@ tokio.workspace = true
 auto_impl.workspace = true
 dyn-clone.workspace = true
 tracing.workspace = true
+rayon.workspace = true
+rocksdb.workspace = true
+bincode.workspace = true    
+eyre.workspace = true
 
 [features]
 js-tracer = ["revm-inspectors/js-tracer", "reth-rpc-eth-types/js-tracer"]

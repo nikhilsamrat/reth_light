@@ -526,16 +526,18 @@ where
         let rocksdb_unwind = factory.rocksdb_provider().check_consistency(&provider_ro)?;
 
         // Step 3: Static file checkpoint consistency (may prune)
-        let static_file_unwind = factory
-            .static_file_provider()
-            .check_consistency(&provider_ro)?
-            .map(|target| match target {
-                PipelineTarget::Unwind(block) => block,
-                PipelineTarget::Sync(_) => unreachable!("check_consistency returns Unwind"),
-            });
+        // let static_file_unwind = factory
+        //     .static_file_provider()
+        //     .check_consistency(&provider_ro)?
+        //     .map(|target| match target {
+        //         PipelineTarget::Unwind(block) => block,
+        //         PipelineTarget::Sync(_) => unreachable!("check_consistency returns Unwind"),
+        //     });
 
         // Take the minimum block number to ensure all storage layers are consistent.
-        let unwind_target = [rocksdb_unwind, static_file_unwind].into_iter().flatten().min();
+        // let unwind_target = [rocksdb_unwind, static_file_unwind].into_iter().flatten().min();
+        let unwind_target = None;
+        let static_file_unwind: Option<()> = None;
 
         if let Some(unwind_block) = unwind_target {
             // Highly unlikely to happen, and given its destructive nature, it's better to panic

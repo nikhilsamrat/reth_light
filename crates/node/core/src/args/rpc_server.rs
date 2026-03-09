@@ -26,6 +26,8 @@ use url::Url;
 
 use super::types::MaxOr;
 
+use clap::builder::OsStr as ClapOsStr;
+
 /// Global static RPC server defaults
 static RPC_SERVER_DEFAULTS: OnceLock<DefaultRpcServerArgs> = OnceLock::new();
 
@@ -485,7 +487,7 @@ pub struct RpcServerArgs {
     ///
     /// If no path is provided, a secret will be generated and stored in the datadir under
     /// `<DIR>/<CHAIN_ID>/jwt.hex`. For mainnet this would be `~/.reth/mainnet/jwt.hex` by default.
-    #[arg(long = "authrpc.jwtsecret", value_name = "PATH", global = true, required = false, default_value = Resettable::from(DefaultRpcServerArgs::get_global().auth_jwtsecret.as_ref().map(|v| v.to_string_lossy().into())))]
+    #[arg(long = "authrpc.jwtsecret", value_name = "PATH", global = true, required = false, default_value = Resettable::from(DefaultRpcServerArgs::get_global().auth_jwtsecret.as_ref().map(|v| ClapOsStr::from(v.as_os_str()))))]
     pub auth_jwtsecret: Option<PathBuf>,
 
     /// Enable auth engine API over IPC

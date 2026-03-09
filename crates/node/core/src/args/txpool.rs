@@ -17,6 +17,9 @@ use reth_transaction_pool::{
 };
 use std::{path::PathBuf, sync::OnceLock, time::Duration};
 
+use clap::builder::OsStr as ClapOsStr;
+
+
 /// Global static transaction pool defaults
 static TXPOOL_DEFAULTS: OnceLock<DefaultTxPoolValues> = OnceLock::new();
 
@@ -396,7 +399,7 @@ pub struct TxPoolArgs {
     pub max_queued_lifetime: Duration,
 
     /// Path to store the local transaction backup at, to survive node restarts.
-    #[arg(long = "txpool.transactions-backup", alias = "txpool.journal", value_name = "PATH", default_value = Resettable::from(DefaultTxPoolValues::get_global().transactions_backup_path.as_ref().map(|v| v.to_string_lossy().into())))]
+    #[arg(long = "txpool.transactions-backup", alias = "txpool.journal", value_name = "PATH", default_value = Resettable::from(DefaultTxPoolValues::get_global().transactions_backup_path.as_ref().map(|v| ClapOsStr::from(v.as_os_str()))))]
     pub transactions_backup_path: Option<PathBuf>,
 
     /// Disables transaction backup to disk on node shutdown.

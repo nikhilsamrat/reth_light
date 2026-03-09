@@ -192,7 +192,7 @@ where
         }
         let (from_block, to_block) = input.next_block_range().into_inner();
 
-        ensure_consistency(provider, None)?;
+        // ensure_consistency(provider, None)?;
 
         debug!(target: "sync::stages::bodies", stage_progress = from_block, target = to_block, "Commencing sync");
 

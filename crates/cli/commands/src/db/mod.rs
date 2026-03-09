@@ -142,7 +142,7 @@ impl<C: ChainSpecParser<ChainSpec: EthChainSpec + EthereumHardforks>> Command<C>
                 command.execute(provider_factory)?;
             }
             Subcommands::Dump(command) => {
-                db_ro_exec!(self.env, tool, N, {
+                db_exec!(self.env, tool, N, AccessRights::RO, { 
                     command.execute(&tool)?;
                 });
             }

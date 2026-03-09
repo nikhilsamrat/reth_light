@@ -11,6 +11,7 @@ use reth_provider::{
     StageCheckpointReader,
 };
 use reth_provider::StaticFileProviderFactory;
+use reth_provider::StaticFileSegment;
 
 use reth_prune_types::{PruneProgress, PrunedSegmentInfo, PrunerOutput};
 use reth_stages_types::StageId;
@@ -337,7 +338,7 @@ impl<PF> Pruner<PF::ProviderRW, PF>
 where
     PF: DatabaseProviderFactory<
         ProviderRW: PruneCheckpointWriter + PruneCheckpointReader + StageCheckpointReader,
-    >,
+    > + StaticFileProviderFactory,
 {
     /// Run the pruner. This will only prune data up to the highest finished ExEx height, if there
     /// are no ExExes.
@@ -350,7 +351,7 @@ where
         provider.commit()?;
         if result.progress.is_finished() {
             let sfp = self.provider_factory.static_file_provider();
-            let range = sfp.find_fixed_range(tip_block_number);
+            let range = sfp.find_fixed_range(StaticFileSegment::Transactions, tip_block_number);
             let blocks_for_file = range.end() - range.start() + 1;
             for i in (0..(tip_block_number-blocks_for_file)).step_by(blocks_for_file.try_into().unwrap()) {
                 if let Err(err) = sfp.delete_tx_jar_force(i) {

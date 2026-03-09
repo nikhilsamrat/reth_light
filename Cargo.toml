@@ -474,7 +474,7 @@ reth-ress-protocol = { path = "crates/ress/protocol" }
 reth-ress-provider = { path = "crates/ress/provider" }
 
 # revm
-revm = { version = "34.0.0", default-features = false }
+revm = { version = "34.0.0", default-features = false, features = ["asyncdb"] }
 revm-bytecode = { version = "8.0.0", default-features = false }
 revm-database = { version = "10.0.0", default-features = false }
 revm-state = { version = "9.0.0", default-features = false }
@@ -490,7 +490,7 @@ alloy-dyn-abi = "1.4.3"
 alloy-eip2124 = { version = "0.2.0", default-features = false }
 alloy-eip7928 = { version = "0.3.0", default-features = false }
 alloy-evm = { version = "0.26.3", default-features = false }
-alloy-primitives = { version = "1.5.0", default-features = false, features = ["map-foldhash"] }
+alloy-primitives = { version = "1.5.0", default-features = false, features = ["map-foldhash", "serde"] }
 alloy-rlp = { version = "0.3.10", default-features = false, features = ["core-net"] }
 alloy-sol-macro = "1.5.0"
 alloy-sol-types = { version = "1.5.0", default-features = false }

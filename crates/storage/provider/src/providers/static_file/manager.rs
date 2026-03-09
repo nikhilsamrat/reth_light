@@ -943,7 +943,7 @@ impl<N: NodePrimitives> StaticFileProvider<N> {
     ///
     /// CAUTION: destructive. Deletes files on disk.
     pub fn delete_jar_force(&self, segment: StaticFileSegment, block: BlockNumber) -> ProviderResult<()> {
-        let fixed_block_range = self.find_fixed_range(block);
+        let fixed_block_range = find_fixed_range(block, DEFAULT_BLOCKS_PER_STATIC_FILE);
         let key = (fixed_block_range.end(), segment);
         let jar = if let Some((_, jar)) = self.map.remove(&key) {
             jar.jar
